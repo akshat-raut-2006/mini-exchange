@@ -1,0 +1,26 @@
+# Maven
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Database
+*.db
+*.db-journal
+api-server/data/
+
+# Build output
+*.jar
+!.mvn/wrapper/maven-wrapper.jar

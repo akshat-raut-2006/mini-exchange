@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mini Exchange — Live Order Book</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Mini Exchange</h1>
+    <span id="connection-status">connecting…</span>
+  </header>
+
+  <main>
+    <section id="order-book">
+      <div class="book-side" id="asks">
+        <h2>Asks</h2>
+        <table>
+          <thead><tr><th>Price</th><th>Qty</th></tr></thead>
+          <tbody id="asks-body"><!-- TODO(person-B): rows rendered by js/app.js --></tbody>
+        </table>
+      </div>
+
+      <div class="book-side" id="bids">
+        <h2>Bids</h2>
+        <table>
+          <thead><tr><th>Price</th><th>Qty</th></tr></thead>
+          <tbody id="bids-body"><!-- TODO(person-B): rows rendered by js/app.js --></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="trade-feed">
+      <h2>Recent Trades</h2>
+      <ul id="trade-feed-list"><!-- TODO(person-B): populated by js/app.js --></ul>
+    </section>
+
+    <section id="submit-order">
+      <h2>Submit Order</h2>
+      <!-- TODO(person-B): simple form -> POST /api/orders. Not a <form> tag
+           requirement here (this isn't React), but keep it minimal. -->
+      <div class="form-row">
+        <select id="side"><option>BUY</option><option>SELL</option></select>
+        <select id="type"><option>LIMIT</option><option>MARKET</option></select>
+        <input id="price" type="number" placeholder="Price" />
+        <input id="quantity" type="number" placeholder="Quantity" />
+        <button id="submit-btn">Submit</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
