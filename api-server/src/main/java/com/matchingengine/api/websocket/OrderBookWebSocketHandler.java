@@ -36,7 +36,18 @@ public class OrderBookWebSocketHandler extends TextWebSocketHandler {
     }
 
     /** Call this whenever the book changes to push an update to all clients. */
-    public void broadcast(String jsonPayload) {
-        throw new UnsupportedOperationException("TODO: send jsonPayload as TextMessage to each open session");
+public void broadcast(String jsonPayload) {
+    TextMessage message = new TextMessage(jsonPayload);
+    for (WebSocketSession session : sessions) {
+        if (session.isOpen()) {
+            try {
+                session.sendMessage(message);
+            } catch (Exception e) {
+                // A single slow/dead client shouldn't break the broadcast for everyone else.
+                // afterConnectionClosed will clean it up from `sessions` shortly anyway.
+            }
+        }
     }
 }
+    }
+
