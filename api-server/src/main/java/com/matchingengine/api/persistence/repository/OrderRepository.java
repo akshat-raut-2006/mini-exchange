@@ -10,10 +10,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Stores/reads order rows. Prices and quantities are stored as TEXT (see
- * schema.sql for why) so we convert BigDecimal <-> String at the boundary.
- */
 @Repository
 public class OrderRepository {
 
@@ -35,11 +31,6 @@ public class OrderRepository {
             Instant.parse(rs.getString("created_at"))
     );
 
-    /**
-     * INSERT OR REPLACE means: if this order's id doesn't exist yet, insert it;
-     * if it does (e.g. we're updating its status/remaining_quantity after a
-     * fill), overwrite the existing row instead of erroring on a duplicate key.
-     */
     public void save(OrderRow order) {
         jdbcTemplate.update(
                 """

@@ -7,16 +7,6 @@ import com.matchingengine.api.service.OrderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * TODO(person-B):
- *  - POST /api/orders           submit a new order
- *  - DELETE /api/orders/{id}    cancel an order (symbol as query param for now)
- *  - GET /api/orders/book       current book snapshot for a symbol
- *  - add @Valid once OrderRequest has bean validation annotations
- *  - add error handling (@ExceptionHandler / @ControllerAdvice) for
- *    unknown order id, invalid symbol, etc. — decide on a consistent
- *    error response shape
- */
 @RestController
 @RequestMapping("/api/orders")
 public class OrderController {
@@ -29,17 +19,19 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<OrderResponse> submitOrder(@RequestBody OrderRequest request) {
-        throw new UnsupportedOperationException("TODO: delegate to orderService.submitOrder");
+        OrderResponse response = orderService.submitOrder(request);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{orderId}")
     public ResponseEntity<Void> cancelOrder(@PathVariable String orderId,
                                              @RequestParam String symbol) {
-        throw new UnsupportedOperationException("TODO: delegate to orderService.cancelOrder");
+        boolean cancelled = orderService.cancelOrder(symbol, orderId);
+        return cancelled ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/book")
     public ResponseEntity<BookSnapshotResponse> getBook(@RequestParam String symbol) {
-        throw new UnsupportedOperationException("TODO: delegate to orderService.getBookSnapshot");
+        return ResponseEntity.ok(orderService.getBookSnapshot(symbol));
     }
 }
