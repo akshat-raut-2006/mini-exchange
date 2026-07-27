@@ -24,14 +24,14 @@ public class OrderController {
     }
 
     @DeleteMapping("/{orderId}")
-    public ResponseEntity<Void> cancelOrder(@PathVariable String orderId,
-                                             @RequestParam String symbol) {
+    public ResponseEntity<Void> cancelOrder(@PathVariable("orderId") String orderId,
+                                             @RequestParam("symbol") String symbol) {
         boolean cancelled = orderService.cancelOrder(symbol, orderId);
         return cancelled ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/book")
-    public ResponseEntity<BookSnapshotResponse> getBook(@RequestParam String symbol) {
+    public ResponseEntity<BookSnapshotResponse> getBook(@RequestParam("symbol") String symbol) {
         return ResponseEntity.ok(orderService.getBookSnapshot(symbol));
     }
 }
