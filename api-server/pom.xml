@@ -15,8 +15,8 @@
 
   <name>Mini Exchange - API Server</name>
   <description>
-    REST + WebSocket API in front of engine-core, with SQLite persistence
-    for orders and trades.
+    REST + WebSocket API in front of engine-core, with Supabase (Postgres)
+    persistence for orders and trades.
   </description>
 
   <properties>
@@ -56,15 +56,17 @@
     </dependency>
 
     <!--
-      Plain JDBC (Spring's JdbcTemplate) rather than JPA/Hibernate: SQLite's
-      Hibernate dialect support is patchy across versions, and for a schema
-      this small (orders, trades) hand-written SQL is less risk than fighting
-      an ORM. Revisit if the schema grows.
+      Plain JDBC (Spring's JdbcTemplate) rather than JPA/Hibernate: for a
+      schema this small (orders, trades) hand-written SQL is less risk than
+      fighting an ORM. Revisit if the schema grows.
+
+      Persistence target is Supabase (managed Postgres), hence the
+      PostgreSQL driver below.
     -->
     <dependency>
-      <groupId>org.xerial</groupId>
-      <artifactId>sqlite-jdbc</artifactId>
-      <version>3.45.3.0</version>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.7.4</version>
     </dependency>
 
     <dependency>

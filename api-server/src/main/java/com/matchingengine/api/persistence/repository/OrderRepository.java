@@ -32,11 +32,23 @@ public class OrderRepository {
     );
 
     public void save(OrderRow order) {
+        // SQLite's "INSERT OR REPLACE" has no direct Postgres equivalent;
+        // this is the Postgres upsert form (requires the primary key
+        // constraint on `id`, which schema.sql already declares).
         jdbcTemplate.update(
                 """
-                INSERT OR REPLACE INTO orders
+                INSERT INTO orders
                     (id, symbol, side, type, price, quantity, remaining_quantity, status, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (id) DO UPDATE SET
+                    symbol = EXCLUDED.symbol,
+                    side = EXCLUDED.side,
+                    type = EXCLUDED.type,
+                    price = EXCLUDED.price,
+                    quantity = EXCLUDED.quantity,
+                    remaining_quantity = EXCLUDED.remaining_quantity,
+                    status = EXCLUDED.status,
+                    created_at = EXCLUDED.created_at
                 """,
                 order.id(),
                 order.symbol(),
