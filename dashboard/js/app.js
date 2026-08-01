@@ -1,8 +1,9 @@
 const API_BASE = "http://localhost:8080";
 const WS_URL = "ws://localhost:8080/ws/orderbook";
-const SYMBOL = "DEMO";
+const SYMBOLS = ["RELIANCE", "TCS", "INFY", "AAPL", "TSLA"];
 
 const els = {
+  symbolSelector: document.getElementById("symbol-selector"),
   statusDot: document.getElementById("status-dot"),
   statusText: document.getElementById("connection-status"),
   lastPrice: document.getElementById("last-price"),
@@ -25,10 +26,52 @@ const els = {
 let state = {
   side: "BUY",
   type: "LIMIT",
+  currentSymbol: SYMBOLS[0],
   lastPrice: null,
   bestBid: null,
   bestAsk: null,
 };
+
+// ---------- Symbol selector ----------
+
+function renderSymbolSelector() {
+  els.symbolSelector.innerHTML = SYMBOLS.map(sym => `
+    <button type="button" class="symbol-btn ${sym === state.currentSymbol ? "active" : ""}" data-symbol="${sym}">
+      ${sym}
+    </button>`).join("");
+}
+
+els.symbolSelector.addEventListener("click", (e) => {
+  const btn = e.target.closest(".symbol-btn");
+  if (!btn || btn.dataset.symbol === state.currentSymbol) return;
+  switchSymbol(btn.dataset.symbol);
+});
+
+async function switchSymbol(symbol) {
+  state.currentSymbol = symbol;
+  state.lastPrice = null;
+  state.bestBid = null;
+  state.bestAsk = null;
+
+  document.getElementById("symbol-label").textContent = symbol;
+  renderSymbolSelector();
+
+  // Reset per-symbol displays — the old symbol's numbers shouldn't linger.
+  els.lastPrice.textContent = "—";
+  els.lastPrice.style.color = "var(--text-primary)";
+  els.lastPriceDelta.textContent = "";
+  updateSpreadAndMid();
+  els.tape.innerHTML = `<div class="empty-state">No trades yet — printed fills will appear here.</div>`;
+
+  // WebSocket only pushes on the next trade, so pull the current book directly
+  // via REST the moment we switch, instead of waiting for something to happen.
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/book?symbol=${encodeURIComponent(symbol)}`);
+    if (res.ok) renderBook(await res.json());
+  } catch (err) {
+    console.error("Failed to load book for", symbol, err);
+  }
+}
 
 // ---------- WebSocket / book rendering ----------
 
@@ -48,7 +91,12 @@ function connectWebSocket() {
     els.statusText.textContent = "connection error";
   };
   ws.onmessage = (event) => {
-    renderBook(JSON.parse(event.data));
+    const snapshot = JSON.parse(event.data);
+    // The server broadcasts every symbol's updates to every connected client;
+    // only render the one the user is actually looking at right now.
+    if (snapshot.symbol === state.currentSymbol) {
+      renderBook(snapshot);
+    }
   };
 }
 
@@ -139,7 +187,7 @@ function updateLastPrice(price, direction) {
 
 // ---------- My orders (blotter) ----------
 
-function appendMyOrder({ orderId, side, type, price, quantity, status }) {
+function appendMyOrder({ orderId, symbol, side, type, price, quantity, status }) {
   els.blotter.querySelector(".empty-state")?.remove();
 
   const row = document.createElement("div");
@@ -149,7 +197,7 @@ function appendMyOrder({ orderId, side, type, price, quantity, status }) {
   const badgeClass = status.toLowerCase();
   row.innerHTML = `
     <span title="${orderId}">${shortId}…</span>
-    <span>${SYMBOL}</span>
+    <span>${symbol}</span>
     <span class="side ${side.toLowerCase()}">${side}</span>
     <span>${type}</span>
     <span>${price != null ? Number(price).toFixed(2) : "MKT"}</span>
@@ -199,7 +247,7 @@ async function submitOrder() {
     return;
   }
 
-  const body = { symbol: SYMBOL, side: state.side, type: state.type, price, quantity };
+  const body = { symbol: state.currentSymbol, side: state.side, type: state.type, price, quantity };
 
   try {
     const res = await fetch(`${API_BASE}/api/orders`, {
@@ -212,6 +260,7 @@ async function submitOrder() {
     const result = await res.json();
     appendMyOrder({
       orderId: result.orderId,
+      symbol: state.currentSymbol,
       side: state.side,
       type: state.type,
       price,
@@ -226,4 +275,6 @@ async function submitOrder() {
 
 els.submitBtn.addEventListener("click", submitOrder);
 
+renderSymbolSelector();
+switchSymbol(state.currentSymbol);
 connectWebSocket();
