@@ -1,6 +1,7 @@
 package com.matchingengine.api.dto;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 public record OrderResponse(
@@ -11,8 +12,10 @@ public record OrderResponse(
 ) {
     public record TradeDto(
             String tradeId,
+            String symbol,
             BigDecimal price,
-            BigDecimal quantity
+            BigDecimal quantity,
+            Instant executedAt
     ) {
     }
 }

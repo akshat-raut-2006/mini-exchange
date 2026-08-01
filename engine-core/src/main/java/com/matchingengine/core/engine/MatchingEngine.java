@@ -1,19 +1,19 @@
 package com.matchingengine.core.engine;
-
+ 
 import com.matchingengine.core.book.OrderBook;
 import com.matchingengine.core.model.Order;
 import com.matchingengine.core.model.OrderSide;
 import com.matchingengine.core.model.OrderType;
 import com.matchingengine.core.model.Trade;
-
+ 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-
+ 
 /**
  * Entry point for order submission and cancellation. This is the "clean
  * interface" (submit order -> match -> return fills) that api-server calls
@@ -28,10 +28,9 @@ import java.util.concurrent.atomic.AtomicLong;
  *     optimizing further.
  */
 public class MatchingEngine {
-
+ 
     private final Map<String, OrderBook> booksBySymbol = new ConcurrentHashMap<>();
-    private final AtomicLong tradeSequence = new AtomicLong();
-
+ 
     /**
      * Submit a new order. For LIMIT orders this matches against the book
      * and rests any unfilled remainder. For MARKET orders this matches
@@ -45,7 +44,7 @@ public class MatchingEngine {
         OrderBook book = getBook(order.getSymbol());
         OrderSide oppositeSide = order.getSide() == OrderSide.BUY ? OrderSide.SELL : OrderSide.BUY;
         List<Trade> trades = new ArrayList<>();
-
+ 
         while (order.getRemainingQuantity().signum() > 0) {
             Order maker = book.peekBest(oppositeSide);
             if (maker == null) {
@@ -54,16 +53,20 @@ public class MatchingEngine {
             if (order.getType() == OrderType.LIMIT && !pricesCross(order, maker)) {
                 break;
             }
-
+ 
             BigDecimal tradeQty = order.getRemainingQuantity().min(maker.getRemainingQuantity());
             BigDecimal tradePrice = maker.getPrice(); // resting order's price is the trade price
-
+ 
             order.reduceRemaining(tradeQty);
             maker.reduceRemaining(tradeQty);
             book.syncAfterMatch(maker);
-
+ 
+            // Trade IDs must be globally unique across restarts, not just within
+            // one run — the database persists across server restarts but an
+            // in-memory counter does not, so a counter-based ID (e.g. "T-1")
+            // will collide with a row from a previous run and fail the insert.
             trades.add(new Trade(
-                    "T-" + tradeSequence.incrementAndGet(),
+                    "T-" + UUID.randomUUID(),
                     order.getSymbol(),
                     maker.getId(),
                     order.getId(),
@@ -71,14 +74,14 @@ public class MatchingEngine {
                     tradeQty,
                     Instant.now()));
         }
-
+ 
         if (order.getRemainingQuantity().signum() > 0 && order.getType() == OrderType.LIMIT) {
             book.addOrder(order);
         }
-
+ 
         return new MatchResult(order, trades);
     }
-
+ 
     /** Cancel a resting order. Returns true if found and cancelled. */
     public boolean cancelOrder(String symbol, String orderId) {
         OrderBook book = getBook(symbol);
@@ -92,12 +95,12 @@ public class MatchingEngine {
         }
         return removed;
     }
-
+ 
     /** Get (or lazily create) the book for a symbol. */
     public OrderBook getBook(String symbol) {
         return booksBySymbol.computeIfAbsent(symbol, OrderBook::new);
     }
-
+ 
     /** True if the incoming order's price is willing to trade against the resting maker's price. */
     private static boolean pricesCross(Order incoming, Order maker) {
         return incoming.getSide() == OrderSide.BUY
@@ -105,3 +108,4 @@ public class MatchingEngine {
                 : incoming.getPrice().compareTo(maker.getPrice()) <= 0;
     }
 }
+ 

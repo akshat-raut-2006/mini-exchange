@@ -115,7 +115,7 @@ public class OrderService {
     private OrderResponse toOrderResponse(MatchResult result) {
         Order o = result.incomingOrder();
         List<OrderResponse.TradeDto> tradeDtos = result.trades().stream()
-                .map(t -> new OrderResponse.TradeDto(t.tradeId(), t.price(), t.quantity()))
+                .map(t -> new OrderResponse.TradeDto(t.tradeId(), t.symbol(), t.price(), t.quantity(), t.executedAt()))
                 .toList();
         return new OrderResponse(o.getId(), o.getStatus().name(), o.getRemainingQuantity(), tradeDtos);
     }

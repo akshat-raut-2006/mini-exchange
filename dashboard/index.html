@@ -2,52 +2,108 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Mini Exchange — Live Order Book</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mini Exchange — DEMO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <header>
-    <h1>Mini Exchange</h1>
-    <span id="connection-status">connecting…</span>
-  </header>
+  <div class="terminal">
 
-  <main>
-    <section id="order-book">
-      <div class="book-side" id="asks">
-        <h2>Asks</h2>
-        <table>
-          <thead><tr><th>Price</th><th>Qty</th></tr></thead>
-          <tbody id="asks-body"><!-- TODO(person-B): rows rendered by js/app.js --></tbody>
-        </table>
+    <header class="ticker-bar">
+      <div class="brand"><span class="brand-mark">◆</span>MINI&nbsp;EXCHANGE</div>
+      <div class="symbol-chip" id="symbol-label">DEMO</div>
+      <div class="last-price-block">
+        <span class="last-price" id="last-price">—</span>
+        <span class="last-price-delta" id="last-price-delta"></span>
       </div>
-
-      <div class="book-side" id="bids">
-        <h2>Bids</h2>
-        <table>
-          <thead><tr><th>Price</th><th>Qty</th></tr></thead>
-          <tbody id="bids-body"><!-- TODO(person-B): rows rendered by js/app.js --></tbody>
-        </table>
+      <div class="spread-block">
+        <span class="stat-label">Spread</span>
+        <span class="stat-value" id="spread-value">—</span>
       </div>
-    </section>
-
-    <section id="trade-feed">
-      <h2>Recent Trades</h2>
-      <ul id="trade-feed-list"><!-- TODO(person-B): populated by js/app.js --></ul>
-    </section>
-
-    <section id="submit-order">
-      <h2>Submit Order</h2>
-      <!-- TODO(person-B): simple form -> POST /api/orders. Not a <form> tag
-           requirement here (this isn't React), but keep it minimal. -->
-      <div class="form-row">
-        <select id="side"><option>BUY</option><option>SELL</option></select>
-        <select id="type"><option>LIMIT</option><option>MARKET</option></select>
-        <input id="price" type="number" placeholder="Price" />
-        <input id="quantity" type="number" placeholder="Quantity" />
-        <button id="submit-btn">Submit</button>
+      <div class="mid-block">
+        <span class="stat-label">Mid</span>
+        <span class="stat-value" id="mid-value">—</span>
       </div>
-    </section>
-  </main>
+      <div class="status-block">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="connection-status">connecting</span>
+      </div>
+    </header>
+
+    <main class="layout">
+
+      <section class="panel ladder-panel">
+        <div class="panel-header">
+          <span>Order Book</span>
+          <span class="panel-subhead">price / size</span>
+        </div>
+        <div class="ladder-columns">
+          <span>Price</span><span>Size</span><span class="depth-col-label">Depth</span>
+        </div>
+        <div class="ladder" id="ladder-asks"></div>
+        <div class="spread-row" id="spread-row"><span>SPREAD</span><span id="spread-row-value">—</span></div>
+        <div class="ladder" id="ladder-bids"></div>
+      </section>
+
+      <section class="panel tape-panel">
+        <div class="panel-header">
+          <span>Trade Tape</span>
+          <span class="panel-subhead">time &amp; sales</span>
+        </div>
+        <div class="tape-columns">
+          <span>Symbol</span><span>Price</span><span>Size</span><span>Time</span>
+        </div>
+        <div class="tape" id="trade-tape">
+          <div class="empty-state">No trades yet — printed fills will appear here.</div>
+        </div>
+      </section>
+
+      <section class="panel ticket-panel">
+        <div class="panel-header"><span>Order Ticket</span></div>
+
+        <div class="side-toggle" id="side-toggle">
+          <button type="button" class="side-btn buy active" data-side="BUY">BUY</button>
+          <button type="button" class="side-btn sell" data-side="SELL">SELL</button>
+        </div>
+
+        <div class="type-toggle" id="type-toggle">
+          <button type="button" class="type-btn active" data-type="LIMIT">LIMIT</button>
+          <button type="button" class="type-btn" data-type="MARKET">MARKET</button>
+        </div>
+
+        <label class="field">
+          <span>Price</span>
+          <input id="price" type="number" step="0.01" placeholder="0.00" />
+        </label>
+
+        <label class="field">
+          <span>Quantity</span>
+          <input id="quantity" type="number" step="1" placeholder="0" />
+        </label>
+
+        <button id="submit-btn" class="submit-btn buy">Place Buy Order</button>
+        <div class="ticket-error" id="ticket-error"></div>
+      </section>
+
+      <section class="panel blotter-panel">
+        <div class="panel-header">
+          <span>My Orders</span>
+          <span class="panel-subhead">this session</span>
+        </div>
+        <div class="blotter-columns">
+          <span>ID</span><span>Symbol</span><span>Side</span><span>Type</span>
+          <span>Price</span><span>Qty</span><span>Status</span><span>Time</span>
+        </div>
+        <div class="blotter" id="my-orders-body">
+          <div class="empty-state">No orders submitted yet.</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
 
   <script src="js/app.js"></script>
 </body>
