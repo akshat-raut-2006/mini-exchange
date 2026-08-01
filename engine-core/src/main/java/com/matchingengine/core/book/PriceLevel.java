@@ -27,22 +27,31 @@ public class PriceLevel {
     }
 
     public void addOrder(Order order) {
-        throw new UnsupportedOperationException("TODO: append to back of queue (time priority)");
+        orders.addLast(order);
     }
 
     public Order peekFirst() {
-        throw new UnsupportedOperationException("TODO: return oldest order at this level without removing it");
+        return orders.peekFirst();
     }
 
     public void removeOrder(Order order) {
-        throw new UnsupportedOperationException("TODO: remove a specific order (cancel), keep FIFO order intact");
+        orders.remove(order);
+    }
+
+    /** Remove and return the oldest order at this level (used once it's fully filled). */
+    public Order pollFirst() {
+        return orders.pollFirst();
     }
 
     public boolean isEmpty() {
-        throw new UnsupportedOperationException("TODO: true when no resting orders remain at this level");
+        return orders.isEmpty();
     }
 
     public BigDecimal totalQuantity() {
-        throw new UnsupportedOperationException("TODO: sum of remaining quantity across all orders at this level");
+        BigDecimal total = BigDecimal.ZERO;
+        for (Order order : orders) {
+            total = total.add(order.getRemainingQuantity());
+        }
+        return total;
     }
 }

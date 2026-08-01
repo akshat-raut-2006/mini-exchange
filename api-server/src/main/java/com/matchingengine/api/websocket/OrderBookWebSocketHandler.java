@@ -8,17 +8,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-/**
- * Broadcasts order book snapshots/deltas to all connected dashboard clients.
- *
- * TODO(person-B):
- *  - decide snapshot-per-change vs. true delta messages (snapshot is much
- *    simpler and fine for the dashboard's scale)
- *  - call broadcast(...) from OrderService after every successful
- *    submit/cancel that changes the book
- *  - pick a JSON shape and document it (e.g. { bids: [...], asks: [...],
- *    lastTrade: {...} })
- */
 @Component
 public class OrderBookWebSocketHandler extends TextWebSocketHandler {
 
@@ -37,6 +26,16 @@ public class OrderBookWebSocketHandler extends TextWebSocketHandler {
 
     /** Call this whenever the book changes to push an update to all clients. */
     public void broadcast(String jsonPayload) {
-        throw new UnsupportedOperationException("TODO: send jsonPayload as TextMessage to each open session");
+        TextMessage message = new TextMessage(jsonPayload);
+        for (WebSocketSession session : sessions) {
+            if (session.isOpen()) {
+                try {
+                    session.sendMessage(message);
+                } catch (Exception e) {
+                    // A single slow/dead client shouldn't break the broadcast for everyone else.
+                    // afterConnectionClosed will clean it up from `sessions` shortly anyway.
+                }
+            }
+        }
     }
 }

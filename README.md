@@ -11,7 +11,7 @@ what's deliberately left out, and [`docs/plan.md`](docs/plan.md) for the
 | Module | Owner | Description |
 |---|---|---|
 | [`engine-core`](engine-core) | Person A | Order book, matching logic, concurrency, benchmarking |
-| [`api-server`](api-server) | Person B | REST API, WebSocket feed, persistence (SQLite) |
+| [`api-server`](api-server) | Person B | REST API, WebSocket feed, persistence (Supabase/Postgres) |
 | [`dashboard`](dashboard) | Person B | Live order book + trade feed UI |
 
 ## Architecture (target)
@@ -27,7 +27,8 @@ what's deliberately left out, and [`docs/plan.md`](docs/plan.md) for the
                         │
              ┌──────────┴───────────┐
              ▼                      ▼
-      SQLite (orders/trades)   WebSocket
+    Supabase/Postgres          WebSocket
+       (orders/trades)
                                      │
                                      ▼
                                dashboard (HTML/JS)
@@ -48,6 +49,31 @@ and the database.
 ```bash
 mvn -q -pl engine-core,api-server -am install
 ```
+
+## Database (Supabase)
+
+`api-server` persists orders and trades to a Supabase Postgres database via
+plain JDBC (`schema.sql` is applied automatically on startup). To connect:
+
+1. Create a project at [supabase.com](https://supabase.com) (or use an
+   existing one).
+2. Go to **Project Settings → Database** and copy the connection string.
+   Prefer the **Transaction pooler** URI (port 6543) for deployment - it
+   works well with the small connection pool used here. The direct
+   connection (port 5432) also works for local development.
+3. Export the connection details as environment variables before running
+   the server:
+
+   ```bash
+   export SUPABASE_DB_URL="jdbc:postgresql://aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres?sslmode=require"
+export SUPABASE_DB_USER="postgres.vxibkcerkykulnmedvcu"
+export SUPABASE_DB_PASSWORD="AkshatRaut19/7/6"
+   ```
+
+   (Or put them in a `.env` file and source it - just don't commit it.)
+
+On startup, Spring runs `schema.sql` against that database, creating the
+`orders` and `trades` tables if they don't already exist.
 
 ## Running
 

@@ -3,8 +3,22 @@ server:
 
 spring:
   datasource:
-    url: jdbc:sqlite:api-server/data/exchange.db
-    driver-class-name: org.sqlite.JDBC
+    # Use the connection string from Supabase → Project Settings → Database.
+    # Prefer the "Transaction pooler" (port 6543) URI for most deployments -
+    # it's what lets a small Hikari pool scale under serverless/many
+    # short-lived connections. Fall back to the direct connection (port
+    # 5432) if you need session-level features the pooler doesn't support.
+    #
+    # Example:
+    #   SUPABASE_DB_URL=jdbc:postgresql://aws-0-<region>.pooler.supabase.com:6543/postgres?sslmode=require
+    #   SUPABASE_DB_USER=postgres.<project-ref>
+    #   SUPABASE_DB_PASSWORD=<your-db-password>
+    url: "${SUPABASE_DB_URL}"
+    username: "${SUPABASE_DB_USER}"
+    password: "${SUPABASE_DB_PASSWORD}"
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
   sql:
     init:
       mode: always

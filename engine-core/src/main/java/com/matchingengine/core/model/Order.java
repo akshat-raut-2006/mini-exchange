@@ -55,11 +55,26 @@ public class Order {
 
     /** TODO(person-A): call this from the matching engine, not from outside callers. */
     public void reduceRemaining(BigDecimal filledQty) {
-        throw new UnsupportedOperationException("TODO: reduce remainingQuantity, update status");
+        if (filledQty == null || filledQty.signum() < 0) {
+            throw new IllegalArgumentException("filledQty must be non-negative: " + filledQty);
+        }
+        if (filledQty.compareTo(remainingQuantity) > 0) {
+            throw new IllegalArgumentException(
+                    "filledQty %s exceeds remainingQuantity %s".formatted(filledQty, remainingQuantity));
+        }
+        remainingQuantity = remainingQuantity.subtract(filledQty);
+        if (remainingQuantity.signum() == 0) {
+            status = OrderStatus.FILLED;
+        } else {
+            status = OrderStatus.PARTIALLY_FILLED;
+        }
     }
 
     public void markCancelled() {
-        throw new UnsupportedOperationException("TODO: set status = CANCELLED, guard against double-cancel");
+        if (status == OrderStatus.FILLED || status == OrderStatus.CANCELLED) {
+            throw new IllegalStateException("Cannot cancel order in status " + status);
+        }
+        status = OrderStatus.CANCELLED;
     }
 
     @Override

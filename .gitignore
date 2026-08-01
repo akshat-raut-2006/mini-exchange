@@ -24,3 +24,5 @@ api-server/data/
 # Build output
 *.jar
 !.mvn/wrapper/maven-wrapper.jar
+.env
+api-server/.env
