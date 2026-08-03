@@ -16,7 +16,8 @@
   <name>Mini Exchange - API Server</name>
   <description>
     REST + WebSocket API in front of engine-core, with Supabase (Postgres)
-    persistence for orders and trades.
+    persistence for orders and trades, and Supabase Auth (JWT) for
+    identifying which user placed each order.
   </description>
 
   <properties>
@@ -71,14 +72,28 @@
 
     <!--
       Loads api-server/.env automatically on startup (SUPABASE_DB_URL,
-      SUPABASE_DB_USER, SUPABASE_DB_PASSWORD) so `mvn spring-boot:run`
-      works with no manual `export`/`source` step. .env itself is
-      gitignored and never committed.
+      SUPABASE_DB_USER, SUPABASE_DB_PASSWORD, SUPABASE_JWT_SECRET) so
+      `mvn spring-boot:run` works with no manual `export`/`source` step.
+      .env itself is gitignored and never committed.
     -->
     <dependency>
       <groupId>me.paulschwarz</groupId>
       <artifactId>spring-dotenv</artifactId>
       <version>4.0.0</version>
+    </dependency>
+
+    <!--
+      Verifies the Supabase Auth JWT sent by the dashboard on order
+      submission (see auth/JwtAuthFilter.java). Supabase signs tokens with
+      an asymmetric key (ES256) and publishes the matching public key via
+      a JWKS endpoint - nimbus-jose-jwt handles fetching/caching that key
+      set and verifying against it. Supabase itself still owns
+      login/signup/password storage; the backend only ever verifies.
+    -->
+    <dependency>
+      <groupId>com.nimbusds</groupId>
+      <artifactId>nimbus-jose-jwt</artifactId>
+      <version>9.40</version>
     </dependency>
 
     <dependency>

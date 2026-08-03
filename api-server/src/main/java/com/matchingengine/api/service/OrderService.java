@@ -45,7 +45,10 @@ public class OrderService {
         this.webSocketHandler = webSocketHandler;
     }
 
-    public OrderResponse submitOrder(OrderRequest request) {
+    // userId/userEmail come from the verified JWT (JwtAuthFilter), never
+    // from the request body itself - a client can't claim to be someone
+    // else by editing the JSON it sends.
+    public OrderResponse submitOrder(OrderRequest request, String userId, String userEmail) {
         Order order = new Order(
                 UUID.randomUUID().toString(),
                 request.symbol(),
@@ -56,9 +59,11 @@ public class OrderService {
                 sequenceGenerator.incrementAndGet()
         );
 
+        // Who placed the order is purely a persistence/audit concern - the
+        // matching engine itself stays completely unaware of user identity.
         MatchResult result = matchingEngine.submitOrder(order);
 
-        persistOrderAndTrades(result);
+        persistOrderAndTrades(result, userId, userEmail);
         broadcastBookUpdate(request.symbol());
 
         return toOrderResponse(result);
@@ -87,12 +92,17 @@ public class OrderService {
         );
     }
 
-    private void persistOrderAndTrades(MatchResult result) {
+    /** Order history for the currently authenticated user - backs GET /api/orders/mine. */
+    public List<OrderRow> getOrdersForUser(String userId) {
+        return orderRepository.findByUserId(userId);
+    }
+
+    private void persistOrderAndTrades(MatchResult result, String userId, String userEmail) {
         Order o = result.incomingOrder();
         orderRepository.save(new OrderRow(
                 o.getId(), o.getSymbol(), o.getSide().name(), o.getType().name(),
                 o.getPrice(), o.getQuantity(), o.getRemainingQuantity(),
-                o.getStatus().name(), o.getCreatedAt()
+                o.getStatus().name(), o.getCreatedAt(), userId, userEmail
         ));
 
         for (Trade t : result.trades()) {

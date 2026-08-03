@@ -28,7 +28,9 @@ public class OrderRepository {
             new BigDecimal(rs.getString("quantity")),
             new BigDecimal(rs.getString("remaining_quantity")),
             rs.getString("status"),
-            Instant.parse(rs.getString("created_at"))
+            Instant.parse(rs.getString("created_at")),
+            rs.getString("user_id"),
+            rs.getString("user_email")
     );
 
     public void save(OrderRow order) {
@@ -38,8 +40,8 @@ public class OrderRepository {
         jdbcTemplate.update(
                 """
                 INSERT INTO orders
-                    (id, symbol, side, type, price, quantity, remaining_quantity, status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, symbol, side, type, price, quantity, remaining_quantity, status, created_at, user_id, user_email)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
                     symbol = EXCLUDED.symbol,
                     side = EXCLUDED.side,
@@ -48,7 +50,9 @@ public class OrderRepository {
                     quantity = EXCLUDED.quantity,
                     remaining_quantity = EXCLUDED.remaining_quantity,
                     status = EXCLUDED.status,
-                    created_at = EXCLUDED.created_at
+                    created_at = EXCLUDED.created_at,
+                    user_id = EXCLUDED.user_id,
+                    user_email = EXCLUDED.user_email
                 """,
                 order.id(),
                 order.symbol(),
@@ -58,7 +62,9 @@ public class OrderRepository {
                 order.quantity().toPlainString(),
                 order.remainingQuantity().toPlainString(),
                 order.status(),
-                order.createdAt().toString()
+                order.createdAt().toString(),
+                order.userId(),
+                order.userEmail()
         );
     }
 
@@ -72,6 +78,13 @@ public class OrderRepository {
     public List<OrderRow> findBySymbol(String symbol) {
         return jdbcTemplate.query(
                 "SELECT * FROM orders WHERE symbol = ?", ROW_MAPPER, symbol
+        );
+    }
+
+    /** All orders placed by a given authenticated user, most recent first. */
+    public List<OrderRow> findByUserId(String userId) {
+        return jdbcTemplate.query(
+                "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC", ROW_MAPPER, userId
         );
     }
 }
