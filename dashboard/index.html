@@ -8,9 +8,40 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <div class="terminal">
+
+  <!-- Shown until the user is authenticated; hidden (not removed) once logged in -->
+  <div class="auth-overlay" id="auth-overlay">
+    <div class="auth-card">
+      <div class="brand"><span class="brand-mark">◆</span>MINI&nbsp;EXCHANGE</div>
+      <p class="auth-subhead">Sign in to place orders. Supabase handles your password — we never see it.</p>
+
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" data-mode="signin">Sign In</button>
+        <button type="button" class="auth-tab" data-mode="signup">Create Account</button>
+      </div>
+
+      <label class="field">
+        <span>Email</span>
+        <input id="auth-email" type="email" placeholder="you@example.com" />
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <div class="password-field">
+          <input id="auth-password" type="password" placeholder="••••••••" />
+          <button type="button" id="toggle-password-btn" class="toggle-password-btn" aria-label="Show password">Show</button>
+        </div>
+      </label>
+
+      <button id="auth-submit-btn" class="submit-btn buy">Sign In</button>
+      <div class="auth-error" id="auth-error"></div>
+      <div class="auth-note" id="auth-note"></div>
+    </div>
+  </div>
+
+  <div class="terminal hidden" id="terminal-root">
 
     <div class="symbol-selector" id="symbol-selector"></div>
 
@@ -32,6 +63,10 @@
       <div class="status-block">
         <span class="status-dot" id="status-dot"></span>
         <span id="connection-status">connecting</span>
+      </div>
+      <div class="user-block">
+        <span id="user-email"></span>
+        <button id="sign-out-btn" class="signout-btn">Sign Out</button>
       </div>
     </header>
 

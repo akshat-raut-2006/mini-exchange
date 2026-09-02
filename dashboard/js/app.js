@@ -2,7 +2,29 @@ const API_BASE = "http://localhost:8080";
 const WS_URL = "ws://localhost:8080/ws/orderbook";
 const SYMBOLS = ["RELIANCE", "TCS", "INFY", "AAPL", "TSLA"];
 
+// Safe to keep in frontend code — Supabase's anon key is designed to be
+// public; access is governed by Supabase's own project-level rules, not
+// by keeping this string secret. The JWT secret used to *verify* tokens
+// server-side is the one that stays private, in api-server/.env.
+const SUPABASE_URL = "https://vxibkcerkykulnmedvcu.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4aWJrY2Vya3lrdWxubWVkdmN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1Nzg0NzQsImV4cCI6MjEwMTE1NDQ3NH0.f-BDPFBHrDGkRpYoZv_83CeloQdUBXlG0L78O_vIMv8";
+
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const els = {
+  authOverlay: document.getElementById("auth-overlay"),
+  authTabs: document.querySelectorAll(".auth-tab"),
+  authEmail: document.getElementById("auth-email"),
+  authPassword: document.getElementById("auth-password"),
+  togglePasswordBtn: document.getElementById("toggle-password-btn"),
+  authSubmitBtn: document.getElementById("auth-submit-btn"),
+  authError: document.getElementById("auth-error"),
+  authNote: document.getElementById("auth-note"),
+
+  terminalRoot: document.getElementById("terminal-root"),
+  userEmail: document.getElementById("user-email"),
+  signOutBtn: document.getElementById("sign-out-btn"),
+
   symbolSelector: document.getElementById("symbol-selector"),
   statusDot: document.getElementById("status-dot"),
   statusText: document.getElementById("connection-status"),
@@ -30,7 +52,123 @@ let state = {
   lastPrice: null,
   bestBid: null,
   bestAsk: null,
+  authMode: "signin", // or "signup"
+  appStarted: false,  // guards against wiring up the terminal more than once
 };
+
+// ---------- Auth ----------
+
+els.authTabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    state.authMode = tab.dataset.mode;
+    els.authTabs.forEach(t => t.classList.toggle("active", t === tab));
+    els.authSubmitBtn.textContent = state.authMode === "signup" ? "Create Account" : "Sign In";
+    els.authError.textContent = "";
+    els.authNote.textContent = "";
+  });
+});
+
+els.togglePasswordBtn.addEventListener("click", () => {
+  const isHidden = els.authPassword.type === "password";
+  els.authPassword.type = isHidden ? "text" : "password";
+  els.togglePasswordBtn.textContent = isHidden ? "Hide" : "Show";
+});
+
+els.authSubmitBtn.addEventListener("click", async () => {
+  els.authError.textContent = "";
+  els.authNote.textContent = "";
+
+  const email = els.authEmail.value.trim();
+  const password = els.authPassword.value;
+
+  if (!email || !password) {
+    els.authError.textContent = "Enter both an email and a password.";
+    return;
+  }
+
+  const { data, error } = state.authMode === "signup"
+    ? await supabaseClient.auth.signUp({ email, password })
+    : await supabaseClient.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    // Supabase's wording varies by version ("User already registered",
+    // "already exists", etc.) - match loosely rather than one exact string.
+    const msg = error.message?.toLowerCase() ?? "";
+    els.authError.textContent = msg.includes("already")
+      ? "An account with this email already exists — try signing in instead."
+      : error.message;
+    return;
+  }
+
+  // When "Confirm email" is enabled in Supabase, signing up with an email
+  // that's already registered returns no error at all (this is intentional
+  // on Supabase's part, to prevent attackers from probing which emails are
+  // registered) - instead you get a user object with an empty `identities`
+  // array. That's the only way to detect it in this configuration.
+  if (state.authMode === "signup" && data?.user?.identities?.length === 0) {
+    els.authError.textContent = "An account with this email already exists — try signing in instead.";
+    return;
+  }
+
+  if (state.authMode === "signup") {
+    els.authNote.textContent = "Account created — check your email if confirmation is required, then sign in.";
+  }
+  // On success, onAuthStateChange (below) handles showing the terminal.
+});
+
+els.signOutBtn.addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+});
+
+supabaseClient.auth.onAuthStateChange((_event, session) => {
+  if (session) {
+    showTerminal(session);
+  } else {
+    showAuthOverlay();
+  }
+});
+
+function showAuthOverlay() {
+  els.authOverlay.classList.remove("hidden");
+  els.terminalRoot.classList.add("hidden");
+
+  // Reset the form so a previous session's email/password don't linger for
+  // the next person signing in on this browser.
+  els.authEmail.value = "";
+  els.authPassword.value = "";
+  els.authPassword.type = "password";
+  els.togglePasswordBtn.textContent = "Show";
+  els.authError.textContent = "";
+  els.authNote.textContent = "";
+  state.authMode = "signin";
+  els.authTabs.forEach(t => t.classList.toggle("active", t.dataset.mode === "signin"));
+  els.authSubmitBtn.textContent = "Sign In";
+}
+
+function showTerminal(session) {
+  els.authOverlay.classList.add("hidden");
+  els.terminalRoot.classList.remove("hidden");
+  els.userEmail.textContent = session.user.email;
+
+  if (!state.appStarted) {
+    state.appStarted = true;
+    startApp();
+  }
+}
+
+/** Current access token, or null if somehow not signed in — used as the bearer token on order requests. */
+async function getAccessToken() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  return session?.access_token ?? null;
+}
+
+// ---------- App startup (only runs once, after first sign-in) ----------
+
+function startApp() {
+  renderSymbolSelector();
+  switchSymbol(state.currentSymbol);
+  connectWebSocket();
+}
 
 // ---------- Symbol selector ----------
 
@@ -247,12 +385,22 @@ async function submitOrder() {
     return;
   }
 
+  const token = await getAccessToken();
+  if (!token) {
+    els.ticketError.textContent = "Your session expired — please sign in again.";
+    await supabaseClient.auth.signOut();
+    return;
+  }
+
   const body = { symbol: state.currentSymbol, side: state.side, type: state.type, price, quantity };
 
   try {
     const res = await fetch(`${API_BASE}/api/orders`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error(`Server responded with ${res.status}`);
@@ -274,7 +422,3 @@ async function submitOrder() {
 }
 
 els.submitBtn.addEventListener("click", submitOrder);
-
-renderSymbolSelector();
-switchSymbol(state.currentSymbol);
-connectWebSocket();

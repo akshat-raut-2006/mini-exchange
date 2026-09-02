@@ -13,6 +13,8 @@ public record OrderRow(
         BigDecimal quantity,
         BigDecimal remainingQuantity,
         String status,
-        Instant createdAt
+        Instant createdAt,
+        String userId,
+        String userEmail
 ) {
 }
